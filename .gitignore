@@ -1,0 +1,4 @@
+# Los ejecutables se publican firmados en las versiones (Releases), no en el código
+*.exe
+*.pfx
+*.p12
