@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -26,6 +28,19 @@ namespace Ligero
                         packaged = GetCurrentPackageFullName(ref len, null) != 15700;
                     }
                     catch { packaged = false; }   // Windows antiguos sin esta función: nunca hay paquete
+                    // Al reabrirse como administrador, Windows puede no darle al proceso su identidad de paquete.
+                    // La carpeta de una app instalada desde un paquete siempre contiene AppxManifest.xml;
+                    // la de un Ligero normal, nunca.
+                    if (!packaged.Value)
+                    {
+                        try
+                        {
+                            Assembly entry = Assembly.GetEntryAssembly();
+                            if (entry != null && !string.IsNullOrEmpty(entry.Location))
+                                packaged = File.Exists(Path.Combine(Path.GetDirectoryName(entry.Location), "AppxManifest.xml"));
+                        }
+                        catch { }
+                    }
                 }
                 return packaged.Value;
             }
@@ -82,7 +97,15 @@ namespace Ligero
         /// <summary>Activa o desactiva el arranque con Windows. Si Windows no lo permite, lanza una excepción con el motivo.</summary>
         public static void SetEnabled(bool on)
         {
-            Windows.ApplicationModel.StartupTask t = Task();
+            Windows.ApplicationModel.StartupTask t;
+            try { t = Task(); }
+            catch
+            {
+                throw new InvalidOperationException(Util.IsAdmin
+                    ? "En modo administrador Windows no deja cambiar el inicio de una app de la Store. Abre LIGERO de forma " +
+                      "normal (sin administrador) y actívalo ahí, o hazlo en Configuración > Aplicaciones > Inicio."
+                    : "Windows no permitió cambiar el inicio de LIGERO. Puedes hacerlo en Configuración > Aplicaciones > Inicio.");
+            }
             if (!on)
             {
                 t.Disable();

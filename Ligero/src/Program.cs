@@ -53,6 +53,10 @@ namespace Ligero
                 }
                 finally { m.ReleaseMutex(); }
             }
+            // La ventana se cerró: el proceso termina aquí aunque quede algo vivo por dentro
+            // (se vio en la versión de la Store abierta como administrador). El historial y las
+            // preferencias ya están guardados en disco en este punto.
+            Environment.Exit(0);
         }
 
         public static bool RestartAsAdmin()
