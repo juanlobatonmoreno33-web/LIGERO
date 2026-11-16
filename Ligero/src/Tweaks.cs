@@ -372,14 +372,18 @@ namespace Ligero
                 new RegEntry("HKCU", CV + "BackgroundAccessApplications", "GlobalUserDisabled", 1, null),
                 new RegEntry("HKCU", CV + "Search", "BackgroundAppGlobalToggle", 0, null)));
 
-            l.Add(new RegTweak("navegadores", "Impedir que Edge y Chrome sigan activos al cerrarlos",
+            // En la versión de la Microsoft Store este ajuste no se ofrece: cambiar directivas de los navegadores
+            // desde otra app es motivo de rechazo. Allí se explica cómo hacerlo desde los propios navegadores.
+            // Se sigue registrando (oculto) para poder deshacerlo si se aplicó con otra versión.
+            browserTweak = new RegTweak("navegadores", "Impedir que Edge y Chrome sigan activos al cerrarlos",
                 "Al cerrar el navegador, Edge y Chrome suelen quedarse en memoria para abrirse antes la próxima vez. " +
                 "Con esto se cierran de verdad y devuelven toda su memoria. El navegador mostrará el aviso " +
                 "«administrado por tu organización»: es normal, lo provoca este ajuste y desaparece al deshacerlo.",
                 true, true, null,
                 new RegEntry("HKCU", @"Software\Policies\Microsoft\Edge", "BackgroundModeEnabled", 0, null),
                 new RegEntry("HKCU", @"Software\Policies\Microsoft\Edge", "StartupBoostEnabled", 0, null),
-                new RegEntry("HKCU", @"Software\Policies\Google\Chrome", "BackgroundModeEnabled", 0, null)));
+                new RegEntry("HKCU", @"Software\Policies\Google\Chrome", "BackgroundModeEnabled", 0, null));
+            if (!PackageInfo.IsPackaged) l.Add(browserTweak);
 
             l.Add(new RegTweak("busquedaweb", "Quitar los resultados de internet del buscador de Inicio",
                 "Al escribir en el menú Inicio, Windows deja de consultar Bing y solo busca en tu equipo. " +
@@ -415,16 +419,21 @@ namespace Ligero
         }
 
         static Tweak[] hidden;
+        static Tweak browserTweak;
 
         /// <summary>Ajustes que no salen en la lista de Acelerar pero también se apuntan y se pueden deshacer.</summary>
         static Tweak[] Hidden()
         {
             if (hidden == null)
-                hidden = new Tweak[] {
-                    new RegTweak("proxyoff", "Proxy desactivado", "El tráfico de internet deja de pasar por un servidor intermedio.",
-                        false, false, null,
-                        new RegEntry("HKCU", @"Software\Microsoft\Windows\CurrentVersion\Internet Settings", "ProxyEnable", 0, 0))
-                };
+            {
+                All();   // crea browserTweak
+                List<Tweak> h = new List<Tweak>();
+                h.Add(new RegTweak("proxyoff", "Proxy desactivado", "El tráfico de internet deja de pasar por un servidor intermedio.",
+                    false, false, null,
+                    new RegEntry("HKCU", @"Software\Microsoft\Windows\CurrentVersion\Internet Settings", "ProxyEnable", 0, 0)));
+                if (PackageInfo.IsPackaged) h.Add(browserTweak);
+                hidden = h.ToArray();
+            }
             return hidden;
         }
 

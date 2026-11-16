@@ -21,7 +21,7 @@ foreach ($linea in Get-Content (Join-Path $raiz 'tienda\identidad.txt') -Encodin
     $i = $linea.IndexOf('=')
     $id[$linea.Substring(0, $i).Trim()] = $linea.Substring($i + 1).Trim()
 }
-foreach ($k in 'Nombre', 'Editor', 'NombreEditor', 'Version') { if (-not $id[$k]) { Fallo "Falta '$k' en tienda\identidad.txt." } }
+foreach ($k in 'Nombre', 'Editor', 'NombreEditor', 'NombreApp', 'Version') { if (-not $id[$k]) { Fallo "Falta '$k' en tienda\identidad.txt." } }
 if ($id.Version -notmatch '^\d+\.\d+\.\d+\.0$') { Fallo "La versión debe tener cuatro números y terminar en .0 (por ejemplo 1.0.0.0)." }
 
 if ($Quitar) {
@@ -41,7 +41,7 @@ if ($LASTEXITCODE -ne 0) { Fallo 'No se pudo compilar.' }
 function Xml($s) { [Security.SecurityElement]::Escape($s) }
 $manifiesto = [IO.File]::ReadAllText((Join-Path $raiz 'tienda\AppxManifest.xml'), [Text.Encoding]::UTF8)
 $manifiesto = $manifiesto.Replace('{NOMBRE}', (Xml $id.Nombre)).Replace('{EDITOR}', (Xml $id.Editor)).
-    Replace('{NOMBRE_EDITOR}', (Xml $id.NombreEditor)).Replace('{VERSION}', (Xml $id.Version))
+    Replace('{NOMBRE_EDITOR}', (Xml $id.NombreEditor)).Replace('{NOMBRE_APP}', (Xml $id.NombreApp)).Replace('{VERSION}', (Xml $id.Version))
 [IO.File]::WriteAllText((Join-Path $carpeta 'AppxManifest.xml'), $manifiesto, (New-Object Text.UTF8Encoding $true))
 
 # ---- imágenes del paquete (se dibujan aquí, con el mismo diseño que el icono) ----

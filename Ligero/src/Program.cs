@@ -1607,7 +1607,7 @@ namespace Ligero
         Panel pgFast;
         Label lblTwIntro, lblTwDesc;
         ListView lvTweaks;
-        Button btnTwToggle, btnTwAll;
+        Button btnTwToggle, btnTwAll, btnTwBrowsers;
 
         // Inicio
         Panel pgStart;
@@ -3503,7 +3503,72 @@ namespace Ligero
             btnTwToggle = Btn(pgFast, "Aplicar el elegido", OnTweakToggle);
             Primary(btnTwToggle);
             btnTwAll = Btn(pgFast, "Aplicar todos los recomendados", OnTweakAll);
+            // En la versión de la Store el ajuste de los navegadores se hace desde los propios navegadores.
+            btnTwBrowsers = Btn(pgFast, "Navegadores en segundo plano…", delegate { ShowBrowserGuide(); });
+            btnTwBrowsers.Visible = PackageInfo.IsPackaged;
             pgFast.Resize += delegate { LayoutFast(); };
+        }
+
+        static string AppPath(string exe)
+        {
+            foreach (Microsoft.Win32.RegistryKey root in new Microsoft.Win32.RegistryKey[] { Microsoft.Win32.Registry.CurrentUser, Microsoft.Win32.Registry.LocalMachine })
+            {
+                try
+                {
+                    using (Microsoft.Win32.RegistryKey k = root.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\App Paths\" + exe))
+                    {
+                        string p = k == null ? null : k.GetValue("") as string;
+                        if (!string.IsNullOrEmpty(p) && File.Exists(p.Trim('"'))) return p.Trim('"');
+                    }
+                }
+                catch { }
+            }
+            return null;
+        }
+
+        /// <summary>Explica cómo evitar que Edge y Chrome se queden en memoria, desde los ajustes de cada navegador.</summary>
+        void ShowBrowserGuide()
+        {
+            using (Form f = new Form())
+            {
+                f.Text = "Navegadores en segundo plano";
+                f.Font = Font;
+                f.BackColor = cBack;
+                f.ForeColor = cText;
+                f.StartPosition = FormStartPosition.CenterParent;
+                f.FormBorderStyle = FormBorderStyle.FixedDialog;
+                f.MinimizeBox = f.MaximizeBox = false;
+                f.ShowInTaskbar = false;
+                f.HandleCreated += delegate
+                {
+                    try { Native.SetChrome(f.Handle, Ui.Dark || Ui.SystemDark(), 1, 0, 0, unchecked((int)0xFFFFFFFF), unchecked((int)0xFFFFFFFF)); } catch { }
+                };
+                f.ClientSize = new Size(P(560), P(380));
+
+                Label intro = Lab(f,
+                    "Al cerrar Edge o Chrome, suelen quedarse en memoria para abrirse antes la próxima vez. En un equipo con poca " +
+                    "memoria conviene apagarlo. Se hace desde los ajustes de cada navegador: pulsa el botón y desactiva estas opciones.",
+                    Font, cSoft);
+                Label edge = Info(f, "Microsoft Edge\nEn «Sistema y rendimiento», apaga «Aumento de inicio» y «Seguir ejecutando " +
+                    "extensiones y aplicaciones en segundo plano cuando Microsoft Edge esté cerrado».");
+                Label chrome = Info(f, "Google Chrome\nEn «Sistema», apaga «Seguir ejecutando aplicaciones en segundo plano al cerrar Google Chrome».");
+                string edgeExe = AppPath("msedge.exe"), chromeExe = AppPath("chrome.exe");
+                Button bEdge = Btn(f, edgeExe != null ? "Abrir ajustes de Edge" : "Edge no está instalado", delegate { Launch(edgeExe, "edge://settings/system"); });
+                Button bChrome = Btn(f, chromeExe != null ? "Abrir ajustes de Chrome" : "Chrome no está instalado", delegate { Launch(chromeExe, "chrome://settings/system"); });
+                bEdge.Enabled = edgeExe != null;
+                bChrome.Enabled = chromeExe != null;
+                Button close = Btn(f, "Cerrar", delegate { f.Close(); });
+                Primary(close);
+
+                int m = P(16), w = f.ClientSize.Width - 2 * m;
+                intro.SetBounds(m, P(12), w, P(62));
+                edge.SetBounds(m, P(80), w, P(92));
+                chrome.SetBounds(m, P(180), w, P(78));
+                bEdge.SetBounds(m, P(272), (w - P(8)) / 2, P(36));
+                bChrome.SetBounds(m + (w - P(8)) / 2 + P(8), P(272), (w - P(8)) / 2, P(36));
+                close.SetBounds(f.ClientSize.Width - m - P(120), f.ClientSize.Height - P(50), P(120), P(34));
+                f.ShowDialog(this);
+            }
         }
 
         void LayoutFast()
@@ -3517,6 +3582,7 @@ namespace Ligero
             lblTwDesc.SetBounds(m, top + listH + P(8), w - 2 * m, descH);
             btnTwToggle.SetBounds(m, by, P(220), P(34));
             btnTwAll.SetBounds(m + P(228), by, P(250), P(34));
+            btnTwBrowsers.SetBounds(m + P(486), by, P(240), P(34));
         }
 
         Tweak SelectedTweak()

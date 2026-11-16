@@ -1,12 +1,12 @@
-# Identidad del paquete de Ligero.
-# Los valores de abajo sirven para PROBAR en este equipo.
-# Para enviar a la Microsoft Store, copia los tres primeros desde Partner Center:
-#   Tu app > Administración de productos > Identidad del producto
-#     Package/Identity/Name          -> Nombre
-#     Package/Identity/Publisher     -> Editor
+# Identidad del paquete de Ligero en la Microsoft Store.
+# Valores copiados de Partner Center: Tu app > Administración de productos > Identidad del producto
+#     Package/Identity/Name                   -> Nombre
+#     Package/Identity/Publisher              -> Editor
 #     Package/Properties/PublisherDisplayName -> NombreEditor
+# NombreApp debe ser exactamente el nombre reservado en Partner Center.
 # La versión debe terminar en .0 (la Store reserva el último número) y subir en cada envío.
-Nombre=Ligero.Pruebas
-Editor=CN=LigeroPruebas
-NombreEditor=Ligero
+Nombre=JOTA.LIGERO
+Editor=CN=AB896155-46C0-4EDE-87A8-23CC35D7686D
+NombreEditor=_JOTA_
+NombreApp=LIGERO
 Version=1.0.0.0
