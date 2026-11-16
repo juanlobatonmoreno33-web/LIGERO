@@ -103,7 +103,7 @@ Sube `Ligero/tienda/salida/Ligero-1.0.0.0.msix` (se genera con `empaquetar.ps1`)
 - **Sitio web:** `https://github.com/juanlobatonmoreno33-web/LIGERO`
 - **Contacto de soporte:** `https://github.com/juanlobatonmoreno33-web/LIGERO/issues`
 - **Política de privacidad:** `https://github.com/juanlobatonmoreno33-web/LIGERO/blob/main/PRIVACIDAD.md` (en *Propiedades*)
-- **Capturas de pantalla:** al menos una, de 1366×768 o más. Recomiendo Inicio, Chequeo, Acelerar, Disco y Deshacer.
+- **Capturas de pantalla:** están en `Ligero/tienda/capturas/` (Inicio, Chequeo, Acelerar, Disco y Personalizar), todas de 1366×768 o más. Súbelas en ese orden.
 
 ---
 
