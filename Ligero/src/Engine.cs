@@ -103,12 +103,30 @@ namespace Ligero
             }
         }
 
-        /// <summary>Ejecuta una orden de PowerShell (para funciones de Windows que solo existen ahí).</summary>
+        /// <summary>Entrecomilla un argumento según las reglas de Windows (las barras solo se doblan delante de una comilla).</summary>
+        static string QuoteArg(string s)
+        {
+            StringBuilder sb = new StringBuilder("\"");
+            int slashes = 0;
+            foreach (char c in s)
+            {
+                if (c == '\\') { slashes++; continue; }
+                if (c == '"') { sb.Append('\\', slashes * 2 + 1); sb.Append('"'); }
+                else { sb.Append('\\', slashes); sb.Append(c); }
+                slashes = 0;
+            }
+            sb.Append('\\', slashes * 2);
+            return sb.Append('"').ToString();
+        }
+
+        /// <summary>
+        /// Ejecuta una orden de PowerShell (solo para lo que no tiene otra vía: las apps de la Tienda).
+        /// La orden va en texto legible, no codificada, para que cualquiera (y cualquier antivirus) vea qué hace.
+        /// </summary>
         public static int RunPS(string script, int timeoutMs, out string output)
         {
-            string b64 = Convert.ToBase64String(Encoding.Unicode.GetBytes(
-                "[Console]::OutputEncoding=[Text.Encoding]::UTF8;$ProgressPreference='SilentlyContinue';" + script));
-            ProcessStartInfo psi = new ProcessStartInfo("powershell.exe", "-NoProfile -NonInteractive -EncodedCommand " + b64);
+            string full = "[Console]::OutputEncoding=[Text.Encoding]::UTF8;$ProgressPreference='SilentlyContinue';" + script;
+            ProcessStartInfo psi = new ProcessStartInfo("powershell.exe", "-NoProfile -NonInteractive -Command " + QuoteArg(full));
             psi.UseShellExecute = false;
             psi.CreateNoWindow = true;
             psi.RedirectStandardOutput = true;
@@ -154,6 +172,40 @@ namespace Ligero
                 else sb.Append(c);
             }
             return sb.ToString();
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  Consultas directas a Windows (WMI), sin pasar por PowerShell
+    // ------------------------------------------------------------------
+    public static class Wmi
+    {
+        /// <summary>Devuelve, por cada resultado, los valores de las propiedades pedidas como texto. Si falla, lista vacía.</summary>
+        public static List<string[]> Query(string scope, string query, params string[] props)
+        {
+            List<string[]> rows = new List<string[]>();
+            try
+            {
+                using (System.Management.ManagementObjectSearcher s = new System.Management.ManagementObjectSearcher(scope, query))
+                using (System.Management.ManagementObjectCollection results = s.Get())
+                {
+                    foreach (System.Management.ManagementBaseObject o in results)
+                    {
+                        using (o)
+                        {
+                            string[] row = new string[props.Length];
+                            for (int i = 0; i < props.Length; i++)
+                            {
+                                object v = o[props[i]];
+                                row[i] = v is char ? ((int)(char)v).ToString() : Convert.ToString(v ?? "");
+                            }
+                            rows.Add(row);
+                        }
+                    }
+                }
+            }
+            catch { }
+            return rows;
         }
     }
 

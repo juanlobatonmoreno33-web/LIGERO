@@ -522,10 +522,22 @@ namespace Ligero
         {
             if (!Util.IsAdmin) return "Sin punto de restauración (hace falta abrir Ligero como administrador).";
             string clean = Regex.Replace(appName, @"[^\w \.\-]", "");
-            string output;
-            int code = Util.RunPS(
-                "try { Checkpoint-Computer -Description 'Ligero antes de quitar " + clean + "' -RestorePointType APPLICATION_UNINSTALL " +
-                "-ErrorAction Stop -WarningAction SilentlyContinue; exit 0 } catch { exit 1 }", 180000, out output);
+            if (clean.Length > 40) clean = clean.Substring(0, 40);
+            int code = -1;
+            try
+            {
+                // Directamente a Restaurar sistema de Windows: 1 = desinstalación de aplicación, 100 = inicio de un cambio.
+                using (System.Management.ManagementClass sr = new System.Management.ManagementClass(@"\\.\root\default:SystemRestore"))
+                using (System.Management.ManagementBaseObject args = sr.GetMethodParameters("CreateRestorePoint"))
+                {
+                    args["Description"] = "Ligero antes de quitar " + clean;
+                    args["RestorePointType"] = 1;
+                    args["EventType"] = 100;
+                    using (System.Management.ManagementBaseObject result = sr.InvokeMethod("CreateRestorePoint", args, null))
+                        code = Convert.ToInt32(result["ReturnValue"]);
+                }
+            }
+            catch { }
             return code == 0
                 ? "Punto de restauración de Windows creado (o ya había uno de las últimas 24 horas)."
                 : "No se pudo crear el punto de restauración (la Protección del sistema puede estar desactivada).";
@@ -911,42 +923,25 @@ namespace Ligero
         {
             SecurityInfo s = new SecurityInfo();
             List<string> on = new List<string>(), all = new List<string>();
-            try
+            // Se pregunta directamente al Centro de seguridad de Windows (sin abrir PowerShell).
+            foreach (string[] row in Wmi.Query(@"root\SecurityCenter2", "SELECT displayName, productState FROM AntiVirusProduct", "displayName", "productState"))
             {
-                string output;
-                int code = Util.RunPS(
-                    "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntiVirusProduct -ErrorAction SilentlyContinue | " +
-                    "ForEach-Object { 'AV' + [char]9 + $_.displayName + [char]9 + $_.productState }; " +
-                    "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName FirewallProduct -ErrorAction SilentlyContinue | " +
-                    "ForEach-Object { 'FW' + [char]9 + $_.displayName + [char]9 + $_.productState }", 30000, out output);
-                if (code == 0)
-                {
-                    foreach (string line in output.Split('\n'))
-                    {
-                        string[] p = line.Trim('\r').Split('\t');
-                        int state;
-                        if (p.Length < 3 || !int.TryParse(p[2], out state)) continue;
-                        bool enabled = (state & 0x1000) != 0;
-                        if (p[0] == "AV")
-                        {
-                            s.Known = true;
-                            all.Add(p[1]);
-                            if (enabled)
-                            {
-                                on.Add(p[1]);
-                                s.AvOn = true;
-                                if ((state & 0x10) == 0) s.AvUpdated = true;
-                            }
-                        }
-                        else if (p[0] == "FW" && enabled)
-                        {
-                            s.FirewallOn = true;
-                            s.Firewall = p[1];
-                        }
-                    }
-                }
+                int state;
+                if (!int.TryParse(row[1], out state)) continue;
+                s.Known = true;
+                all.Add(row[0]);
+                if ((state & 0x1000) == 0) continue;
+                on.Add(row[0]);
+                s.AvOn = true;
+                if ((state & 0x10) == 0) s.AvUpdated = true;
             }
-            catch { }
+            foreach (string[] row in Wmi.Query(@"root\SecurityCenter2", "SELECT displayName, productState FROM FirewallProduct", "displayName", "productState"))
+            {
+                int state;
+                if (!int.TryParse(row[1], out state) || (state & 0x1000) == 0) continue;
+                s.FirewallOn = true;
+                s.Firewall = row[0];
+            }
             s.Antivirus = string.Join(", ", (on.Count > 0 ? on : all).ToArray());
 
             try
@@ -1386,21 +1381,26 @@ namespace Ligero
             catch { }
 
             // Tipo de disco donde está Windows.
+            // (Se pregunta directamente al servicio de almacenamiento de Windows, sin abrir PowerShell.)
             try
             {
-                string output;
-                string letter = Path.GetPathRoot(Environment.SystemDirectory).Substring(0, 1);
-                if (Util.RunPS("$d = Get-Partition -DriveLetter " + letter + " -ErrorAction Stop | Get-Disk | Get-PhysicalDisk | Select-Object -First 1; " +
-                               "$d.MediaType.ToString() + [char]9 + $d.BusType.ToString()", 25000, out output) == 0)
+                char letter = char.ToUpperInvariant(Path.GetPathRoot(Environment.SystemDirectory)[0]);
+                string disk = null;
+                foreach (string[] row in Wmi.Query(@"root\Microsoft\Windows\Storage", "SELECT DriveLetter, DiskNumber FROM MSFT_Partition", "DriveLetter", "DiskNumber"))
                 {
-                    string[] parts = output.Trim().Split('\t');
-                    if (parts.Length >= 2)
-                    {
-                        if (parts[0].IndexOf("SSD", StringComparison.OrdinalIgnoreCase) >= 0)
-                            p.Disk = parts[1].IndexOf("NVMe", StringComparison.OrdinalIgnoreCase) >= 0 ? "SSD rápido (NVMe)" : "SSD";
-                        else if (parts[0].IndexOf("HDD", StringComparison.OrdinalIgnoreCase) >= 0) p.Disk = "duro mecánico (HDD)";
-                    }
+                    int code;
+                    if (int.TryParse(row[0], out code) && code > 0 && char.ToUpperInvariant((char)code) == letter) { disk = row[1]; break; }
+                    if (row[0].Length == 1 && char.ToUpperInvariant(row[0][0]) == letter) { disk = row[1]; break; }
                 }
+                if (disk != null)
+                    foreach (string[] row in Wmi.Query(@"root\Microsoft\Windows\Storage", "SELECT DeviceId, MediaType, BusType FROM MSFT_PhysicalDisk", "DeviceId", "MediaType", "BusType"))
+                    {
+                        if (row[0] != disk) continue;
+                        // MediaType: 3 = HDD, 4 = SSD.  BusType: 17 = NVMe.
+                        if (row[1] == "4") p.Disk = row[2] == "17" ? "SSD rápido (NVMe)" : "SSD";
+                        else if (row[1] == "3") p.Disk = "duro mecánico (HDD)";
+                        break;
+                    }
             }
             catch { }
 

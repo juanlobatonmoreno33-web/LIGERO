@@ -20,7 +20,7 @@ $opciones.CompilerOptions = '/optimize+'
 $fw = [Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory()
 $wm = Join-Path $env:WINDIR 'System32\WinMetadata'
 [void]$opciones.ReferencedAssemblies.AddRange([string[]]@(
-    'System.dll', 'System.Core.dll', 'System.Drawing.dll', 'System.Windows.Forms.dll',
+    'System.dll', 'System.Core.dll', 'System.Drawing.dll', 'System.Windows.Forms.dll', 'System.Management.dll',
     # Para las funciones de la versión de la Store (arranque con Windows)
     (Join-Path $fw 'System.Runtime.dll'), (Join-Path $wm 'Windows.Foundation.winmd'), (Join-Path $wm 'Windows.ApplicationModel.winmd')))
 

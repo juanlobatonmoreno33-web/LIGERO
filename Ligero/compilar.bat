@@ -11,7 +11,7 @@ rem Descripciones de Windows para las funciones de la versión de la Store (arra
 set WM=%WINDIR%\System32\WinMetadata
 "%FW%\csc.exe" /nologo /target:winexe /optimize+ /codepage:65001 /platform:anycpu ^
   /win32manifest:app.manifest /win32icon:Ligero.ico /out:"%OUT%" ^
-  /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll ^
+  /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Management.dll ^
   /r:"%FW%\System.Runtime.dll" /r:"%WM%\Windows.Foundation.winmd" /r:"%WM%\Windows.ApplicationModel.winmd" ^
   src\*.cs
 if errorlevel 1 (echo. & echo ERROR al compilar. & exit /b 1)
