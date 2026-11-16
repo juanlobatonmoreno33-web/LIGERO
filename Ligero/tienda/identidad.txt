@@ -1,0 +1,12 @@
+# Identidad del paquete de Ligero.
+# Los valores de abajo sirven para PROBAR en este equipo.
+# Para enviar a la Microsoft Store, copia los tres primeros desde Partner Center:
+#   Tu app > Administración de productos > Identidad del producto
+#     Package/Identity/Name          -> Nombre
+#     Package/Identity/Publisher     -> Editor
+#     Package/Properties/PublisherDisplayName -> NombreEditor
+# La versión debe terminar en .0 (la Store reserva el último número) y subir en cada envío.
+Nombre=Ligero.Pruebas
+Editor=CN=LigeroPruebas
+NombreEditor=Ligero
+Version=1.0.0.0

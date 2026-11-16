@@ -2,3 +2,5 @@
 *.exe
 *.pfx
 *.p12
+# Lo que genera empaquetar.ps1
+Ligero/tienda/salida/

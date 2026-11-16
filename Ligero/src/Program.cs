@@ -44,6 +44,8 @@ namespace Ligero
                     Native.EnableDpiAwareness();
                     RealExe = ScriptPath == null;
                     if (Array.IndexOf(Environment.GetCommandLineArgs(), "--segundo-plano") >= 0) Background = true;
+                    // Instalado desde la Store, Windows lo abre al iniciar sesión sin argumentos: se pregunta a Windows.
+                    else if (PackageInfo.IsPackaged && StoreRuntime.LaunchedAtStartup()) Background = true;
                     try { ShowSignal = new EventWaitHandle(false, EventResetMode.AutoReset, SignalName); } catch { }
                     Application.EnableVisualStyles();
                     try { Application.SetCompatibleTextRenderingDefault(false); } catch { }
@@ -165,8 +167,21 @@ namespace Ligero
             return "\"" + Application.ExecutablePath + "\" --segundo-plano";
         }
 
+        /// <summary>¿Está activado ahora mismo el arranque con Windows?</summary>
+        public static bool IsOn()
+        {
+            if (PackageInfo.IsPackaged) return StoreRuntime.IsEnabled();
+            return Current() != null;
+        }
+
         public static void Set(bool on)
         {
+            // Instalado desde la Store, el arranque lo gestiona Windows (y el usuario lo ve en Configuración > Aplicaciones > Inicio).
+            if (PackageInfo.IsPackaged)
+            {
+                StoreRuntime.SetEnabled(on);
+                return;
+            }
             using (Microsoft.Win32.RegistryKey k = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(Key))
             {
                 if (on) k.SetValue(Name, Command());
@@ -2903,6 +2918,8 @@ namespace Ligero
 
             togAuto = new Toggle();
             togAuto.Font = Font;
+            // En la versión de la Store el estado real lo tiene Windows (el usuario puede cambiarlo desde Configuración).
+            if (PackageInfo.IsPackaged) Prefs.AutoStart = AutoStart.IsOn();
             togAuto.SetSilently(Prefs.AutoStart);
             togAuto.Text = Prefs.AutoStart ? "Arranca con Windows" : "No arranca solo";
             togAuto.CheckedChanged += delegate
@@ -2916,13 +2933,20 @@ namespace Ligero
                     Prefs.Save();
                     togAuto.Text = on ? "Arranca con Windows" : "No arranca solo";
                     if (!togSmart.IsDisposed) togSmart.SetSilently(Prefs.SmartBoost);
-                    SetStatus(on ? "Ligero arrancará con Windows, oculto junto al reloj. Si mueves la carpeta de Ligero, vuelve a activar esta opción."
+                    SetStatus(on ? (PackageInfo.IsPackaged ? "Ligero arrancará con Windows, oculto junto al reloj."
+                                     : "Ligero arrancará con Windows, oculto junto al reloj. Si mueves la carpeta de Ligero, vuelve a activar esta opción.")
                                  : "Ligero ya no arrancará con Windows.");
                 }
                 catch (Exception ex)
                 {
                     togAuto.SetSilently(!on);
-                    ShowError(ex);
+                    togAuto.Text = !on ? "Arranca con Windows" : "No arranca solo";
+                    if (PackageInfo.IsPackaged && ex is InvalidOperationException)
+                    {
+                        if (MessageBox.Show(this, ex.Message + "\n\n¿Abrir esa página de Configuración ahora?", "Iniciar con Windows",
+                            MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes) Launch("ms-settings:startupapps", null);
+                    }
+                    else ShowError(ex);
                 }
             };
             AddRow(1, "Iniciar con Windows", "Ligero arranca solo al encender y se queda oculto junto al reloj, para que la optimización inteligente " +
@@ -3196,7 +3220,8 @@ namespace Ligero
             }
 
             // Si la carpeta de Ligero cambió de sitio, la orden de arranque con Windows se pone al día.
-            if (Prefs.AutoStart && (Program.ScriptPath != null || Program.RealExe))
+            // (La versión de la Store no usa esta orden: Windows sabe siempre dónde está la app.)
+            if (Prefs.AutoStart && !PackageInfo.IsPackaged && (Program.ScriptPath != null || Program.RealExe))
             {
                 try { if (AutoStart.Current() != AutoStart.Command()) AutoStart.Set(true); } catch { }
             }

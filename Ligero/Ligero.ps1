@@ -17,8 +17,12 @@ $opciones = New-Object System.CodeDom.Compiler.CompilerParameters
 $opciones.GenerateInMemory = $true
 $opciones.GenerateExecutable = $false
 $opciones.CompilerOptions = '/optimize+'
+$fw = [Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory()
+$wm = Join-Path $env:WINDIR 'System32\WinMetadata'
 [void]$opciones.ReferencedAssemblies.AddRange([string[]]@(
-    'System.dll', 'System.Core.dll', 'System.Drawing.dll', 'System.Windows.Forms.dll'))
+    'System.dll', 'System.Core.dll', 'System.Drawing.dll', 'System.Windows.Forms.dll',
+    # Para las funciones de la versión de la Store (arranque con Windows)
+    (Join-Path $fw 'System.Runtime.dll'), (Join-Path $wm 'Windows.Foundation.winmd'), (Join-Path $wm 'Windows.ApplicationModel.winmd')))
 
 $compilador = New-Object Microsoft.CSharp.CSharpCodeProvider
 $resultado = $compilador.CompileAssemblyFromSource($opciones, [string[]]$fuentes)
