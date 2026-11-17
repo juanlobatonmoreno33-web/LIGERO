@@ -16,7 +16,7 @@ Sube `Ligero/tienda/salida/Ligero-1.0.0.0.msix` (se genera con `empaquetar.ps1`)
 
 ## 2. Justificación de los permisos especiales
 
-**Dónde:** *Envío → Opciones de envío → Capacidades restringidas* (aparece una caja de texto por cada capacidad que lo necesita).
+**Dónde:** *Envío → Opciones de envío → Capacidades restringidas* (aparece una caja de texto por cada capacidad que lo necesita; cada caja admite como máximo 500 caracteres).
 
 ### `runFullTrust`
 
@@ -24,11 +24,11 @@ Sube `Ligero/tienda/salida/Ligero-1.0.0.0.msix` (se genera con `empaquetar.ps1`)
 
 ### `allowElevation`
 
-> Some optional optimizations change machine-wide Windows settings that require administrator rights: disabling the SysMain, Windows Search indexer and DiagTrack services, turning hibernation off, cleaning Windows Update download caches and creating a system restore point before an uninstall. LIGERO always runs as a standard user. It only asks for elevation when the user presses the "Open as administrator" button or chooses one of these settings, and the standard Windows UAC prompt is shown every time. Every change is recorded in the app's history and can be undone from the "Undo" page.
+> Some optional optimizations change machine-wide settings that need administrator rights: disabling the SysMain, Windows Search and DiagTrack services, turning hibernation off, cleaning Windows Update caches and creating a restore point before an uninstall. LIGERO runs as a standard user and only asks for elevation when the user presses "Open as administrator" or picks one of these settings; the normal UAC prompt is always shown. Every change is logged and can be undone.
 
 ### `unvirtualizedResources`
 
-> LIGERO's purpose is to change real Windows settings and clean real user files, and to be able to undo those changes later. With registry and file-system write virtualization enabled, its changes to HKCU (for example visual effects, Game Bar recording, Store suggestions and startup-app approval in HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved) would be written to a private hive that Windows never reads, so they would have no effect. In the same way, files restored by the Undo feature into %LOCALAPPDATA% (for example the user's Temp folder and browser caches) would be redirected to a private location and would not be visible to the apps that own them. For this reason the package declares desktop6:RegistryWriteVirtualization and desktop6:FileSystemWriteVirtualization as "disabled". The app only writes to these locations when the user explicitly triggers an action, every change is logged, and every change can be reverted from the app.
+> LIGERO changes real Windows settings and cleans real user files, and must be able to undo them. With write virtualization, its HKCU changes (visual effects, Game Bar, Store suggestions, StartupApproved) would go to a private hive Windows never reads, and files restored by Undo into %LOCALAPPDATA% (Temp, browser caches) would be hidden from their apps. So registry and file-system write virtualization are disabled. Writes happen only on explicit user action, are logged and can be reverted.
 
 ---
 
@@ -112,7 +112,7 @@ Sube `Ligero/tienda/salida/Ligero-1.0.0.0.msix` (se genera con `empaquetar.ps1`)
 **Dónde:** *Envío → Propiedades* y *Clasificación por edades*
 
 - **Categoría:** Utilidades y herramientas.
-- **¿Accede, recopila o transmite información personal?** No.
+- **¿Accede, recopila o transmite información personal?** Sí. Ligero no recopila ni envía nada, pero lee archivos de las carpetas personales (archivos sin usar, duplicados, descargas), así que la respuesta honesta es «Sí». La URL de la política de privacidad es obligatoria de todos modos por las capacidades restringidas.
 - **Requisitos de sistema:** puedes dejarlos vacíos. Si los rellenas: memoria mínima 2 GB.
 - **Clasificación por edades:** en el cuestionario, la app no tiene violencia, contenido sexual, lenguaje adulto, apuestas, compras ni intercambio de datos entre usuarios, así que debería salir para todas las edades.
 - **Precio:** Gratis.
